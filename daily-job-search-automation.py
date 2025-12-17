@@ -98,18 +98,16 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 # ---------- Helpers ----------
 
 def serpapi_search(query, location, num_results=10):
-    """Use SerpApi to perform a Google search and return organic results.
-    Returns a list of dicts: {title, link, snippet, source}
-    """
     params = {
         "q": query,
         "location": location,
         "api_key": SERPAPI_API_KEY,
-        "num": num_results,
         "gl": "in",
         "hl": "en",
     }
+
     url = "https://serpapi.com/search.json"
+
     try:
         resp = requests.get(url, params=params, timeout=30)
         resp.raise_for_status()
@@ -119,26 +117,31 @@ def serpapi_search(query, location, num_results=10):
         return []
 
     results = []
-    # SerpApi returns organic_results (Google) or maybe 'jobs_results' for job widgets
-    if "jobs_results" in data:
-        for j in data.get("jobs_results", [])[:num_results]:
+
+    # Handle Google Jobs results
+    jobs_results = data.get("jobs_results")
+    if isinstance(jobs_results, list):
+        for j in jobs_results[:num_results]:
             results.append({
-                "title": j.get("title"),
-                "link": j.get("link"),
-                "snippet": j.get("description"),
-                "source": j.get("source"),
+                "title": j.get("title", ""),
+                "link": j.get("link", ""),
+                "snippet": j.get("description", ""),
+                "source": j.get("company_name", ""),
             })
-    elif "organic_results" in data:
-        for item in data.get("organic_results", [])[:num_results]:
+
+    # Handle normal organic results
+    organic_results = data.get("organic_results")
+    if isinstance(organic_results, list):
+        for item in organic_results[:num_results]:
             results.append({
-                "title": item.get("title"),
-                "link": item.get("link"),
-                "snippet": item.get("snippet"),
-                "source": item.get("displayed_link") or item.get("link"),
+                "title": item.get("title", ""),
+                "link": item.get("link", ""),
+                "snippet": item.get("snippet", ""),
+                "source": item.get("displayed_link", ""),
             })
-    else:
-        logging.info("No organic_results or jobs_results returned by SerpApi for query=%s", query)
+
     return results
+
 
 
 def matches_experience(text):
